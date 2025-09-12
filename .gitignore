@@ -1,0 +1,31 @@
+# Node/JS common
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+
+# Coverage and build
+coverage/
+dist/
+.cache/
+
+# Client build output
+client/build/
+
+# Server logs
+server/logs/
+
+# Env files
+.env
+client/.env
+server/.env
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Docker / artifacts
+*.tar
+.dist/
