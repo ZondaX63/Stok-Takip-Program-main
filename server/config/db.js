@@ -4,7 +4,7 @@ require('dotenv').config();
 const connectDB = async () => {
         const fallbackCluster = 'mongodb://mongo:27017/stok_takip';
         const fallbackLocal = 'mongodb://127.0.0.1:27017/stok_takip';
-        const fallback = process.env.AIO ? fallbackLocal : fallbackCluster;
+        const fallback = fallbackLocal;
         const uri = process.env.MONGO_URI || fallback;
 
     if (!uri || typeof uri !== 'string') {

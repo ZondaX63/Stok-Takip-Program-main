@@ -18,7 +18,7 @@ router.post('/', [auth, [
     const {
         name, sku, description, barcode, tags, unit,
         purchasePrice, salePrice, quantity, criticalStockLevel, trackStock,
-        brand, category, shelfLocation
+        brand, category, shelfLocation, currency, priceUSD, priceEUR
     } = req.body;
 
     console.log('Received product data:', req.body);
@@ -32,7 +32,7 @@ router.post('/', [auth, [
         product = new Product({
             name, sku, description, barcode, tags, unit,
             purchasePrice, salePrice, quantity, criticalStockLevel, trackStock,
-            brand, category, shelfLocation,
+            brand, category, shelfLocation, currency, priceUSD, priceEUR,
             company: req.user.company
         });
 
@@ -100,7 +100,7 @@ router.get('/', auth, async (req, res) => {
             query.trackStock = true;
             query.$expr = { $lte: ["$quantity", "$criticalStockLevel"] };
         }
-        
+
         // If limit is 0, return all documents, otherwise paginate
         if (parseInt(limit, 10) === 0) {
             const products = await Product.find(query).sort({ [sort]: order === 'asc' ? 1 : -1 });
@@ -117,7 +117,7 @@ router.get('/', auth, async (req, res) => {
             limit: parseInt(limit, 10),
             sort: { [sort]: order === 'asc' ? 1 : -1 },
         };
-        
+
         const result = await Product.paginate(query, options);
 
         res.json({
@@ -170,7 +170,7 @@ router.put('/:id', auth, async (req, res) => {
     const {
         name, sku, description, barcode, tags, unit,
         purchasePrice, salePrice, quantity, criticalStockLevel, trackStock,
-        brand, category, shelfLocation
+        brand, category, shelfLocation, currency, priceUSD, priceEUR
     } = req.body;
 
     const productFields = {};
@@ -207,6 +207,9 @@ router.put('/:id', auth, async (req, res) => {
         }
     }
     if (shelfLocation !== undefined) productFields.shelfLocation = shelfLocation;
+    if (currency) productFields.currency = currency;
+    if (priceUSD !== undefined) productFields.priceUSD = priceUSD;
+    if (priceEUR !== undefined) productFields.priceEUR = priceEUR;
 
     try {
         let product = await Product.findOne({ _id: req.params.id, company: req.user.company });
@@ -303,8 +306,8 @@ router.get('/:id', auth, async (req, res) => {
             'products.product': product._id,
             company: req.user.company
         })
-        .populate('customerOrSupplier', 'name')
-        .sort({ date: -1 });
+            .populate('customerOrSupplier', 'name')
+            .sort({ date: -1 });
 
         // Stok hareketleri
         const StockMovement = require('../models/StockMovement');
@@ -312,8 +315,8 @@ router.get('/:id', auth, async (req, res) => {
             product: product._id,
             company: req.user.company
         })
-        .populate('invoice', 'invoiceNumber type date')
-        .sort({ date: -1 });
+            .populate('invoice', 'invoiceNumber type date')
+            .sort({ date: -1 });
 
         res.json({ product, invoices, movements });
     } catch (err) {
@@ -343,7 +346,7 @@ router.post('/import-stock-count', auth, async (req, res) => {
         for (const update of stockUpdates) {
             try {
                 const { sku, quantity, countedQuantity, countDate: itemCountDate, countNotes } = update;
-                
+
                 if (!sku) {
                     results.errors.push({ error: 'SKU is required', data: update });
                     continue;
@@ -351,14 +354,14 @@ router.post('/import-stock-count', auth, async (req, res) => {
 
                 // SKU ile ürünü bul
                 let product = await Product.findOne({ sku, company: req.user.company });
-                
+
                 if (product) {
                     // Mevcut ürünü güncelle
                     const oldQuantity = product.quantity;
                     product.quantity = countedQuantity || quantity || 0;
                     product.lastCountDate = new Date(itemCountDate || countDate);
                     product.lastCountNotes = countNotes || '';
-                    
+
                     // Diğer alanları da güncelle (mobil uygulamadan gelen veriler varsa)
                     if (update.name) product.name = update.name;
                     if (update.barcode) product.barcode = update.barcode;
@@ -372,7 +375,7 @@ router.post('/import-stock-count', auth, async (req, res) => {
                     if (update.shelfLocation) product.shelfLocation = update.shelfLocation;
 
                     await product.save();
-                    
+
                     // Stok hareketi oluştur
                     const StockMovement = require('../models/StockMovement');
                     await StockMovement.create({
@@ -386,7 +389,7 @@ router.post('/import-stock-count', auth, async (req, res) => {
 
                     results.success.push({ sku, oldQuantity, newQuantity: product.quantity });
                     results.updated++;
-                    
+
                     // Kritik stok kontrolü ve bildirim
                     if (product.trackStock && product.quantity <= product.criticalStockLevel) {
                         const existing = await Notification.findOne({
@@ -429,7 +432,7 @@ router.post('/import-stock-count', auth, async (req, res) => {
                         results.success.push({ sku, created: true, quantity: product.quantity });
                         results.created++;
                     } else {
-                        results.errors.push({ 
+                        results.errors.push({
                             error: 'Product not found and insufficient data to create new product',
                             sku: sku,
                             required: ['name', 'unit']
@@ -437,9 +440,9 @@ router.post('/import-stock-count', auth, async (req, res) => {
                     }
                 }
             } catch (error) {
-                results.errors.push({ 
-                    error: error.message, 
-                    sku: update.sku || 'unknown' 
+                results.errors.push({
+                    error: error.message,
+                    sku: update.sku || 'unknown'
                 });
             }
         }
@@ -474,9 +477,9 @@ router.post('/import-stock-count', auth, async (req, res) => {
 
     } catch (err) {
         console.error('Stock count import error:', err);
-        res.status(500).json({ 
+        res.status(500).json({
             msg: 'Server Error during stock count import',
-            error: err.message 
+            error: err.message
         });
     }
 });

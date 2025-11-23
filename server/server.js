@@ -12,8 +12,8 @@ app.set('trust proxy', 1);
 
 // Connect Database
 connectDB().catch((err) => {
-    console.error('Database connection failed:', err.message);
-    process.exit(1);
+  console.error('Database connection failed:', err.message);
+  process.exit(1);
 });
 
 // Middleware
@@ -36,7 +36,9 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/settings', require('./routes/settings')); // Ayarlar (settings) endpointi eklendi
 app.use('/api/autocomplete', require('./routes/autocomplete'));// Otomatik tamamlama (autocomplete) endpointi eklendi
 app.use('/api/search', require('./routes/search')); // Dinamik arama, filtreleme, sıralama endpointi eklendi
-app.use('/api/notifications', require('./routes/notifications')); // Kritik stok bildirimleri endpointi eklendi
+app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/offers', require('./routes/offers'));
+app.use('/api/orders', require('./routes/orders')); // Kritik stok bildirimleri endpointi eklendi
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/movements', require('./routes/movements'));
 app.use('/api/brands', require('./routes/brands'));
@@ -52,8 +54,8 @@ app.use(express.static(staticDir));
 
 // Health endpoint for Docker/monitoring
 app.get('/health', async (req, res) => {
-    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-    res.json({ status: 'ok', database: dbStatus });
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  res.json({ status: 'ok', database: dbStatus });
 });
 
 // SPA fallback to index.html for non-API routes
@@ -69,11 +71,11 @@ if (process.env.NODE_ENV !== 'test') {
 
 const logger = require('./utils/logger'); // Example logger utility
 process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Unhandled Rejection:', reason);
+  logger.error('Unhandled Rejection:', reason);
 });
 process.on('uncaughtException', (err) => {
-    logger.error('Uncaught Exception:', err);
-    process.exit(1);
+  logger.error('Uncaught Exception:', err);
+  process.exit(1);
 });
 
 module.exports = app;

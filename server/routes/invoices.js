@@ -48,7 +48,7 @@ router.get('/due-soon', auth, async (req, res) => {
     try {
         const now = new Date();
         const soon = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
-        
+
         const invoices = await Invoice.find({
             company: req.user.company,
             dueDate: { $gte: now, $lte: soon },
@@ -113,11 +113,11 @@ router.get('/', auth, async (req, res) => {
             limit: parseInt(limit, 10) === 0 ? undefined : parseInt(limit, 10),
             sort: { [sort]: order === 'asc' ? 1 : -1 }
         };
-        
+
         if (parseInt(limit, 10) === 0) {
             const invoices = await Invoice.find(query)
                 .sort(options.sort);
-            
+
             // Manually populate customer/supplier data
             const populatedInvoices = await Promise.all(invoices.map(async (invoice) => {
                 const invoiceObj = invoice.toObject();
@@ -130,12 +130,12 @@ router.get('/', auth, async (req, res) => {
                 }
                 return invoiceObj;
             }));
-            
+
             return res.json({ docs: populatedInvoices });
         }
 
         const result = await Invoice.paginate(query, options);
-        
+
         // Manually populate customer/supplier data
         const populatedInvoices = await Promise.all(result.docs.map(async (invoice) => {
             const invoiceObj = invoice.toObject();
@@ -148,7 +148,7 @@ router.get('/', auth, async (req, res) => {
             }
             return invoiceObj;
         }));
-        
+
         res.json({
             invoices: populatedInvoices,
             totalInvoices: result.totalDocs,
@@ -170,7 +170,7 @@ router.get('/:id', auth, async (req, res) => {
         const invoice = await Invoice.findById(req.params.id)
             .populate('products.product');
         if (!invoice) return res.status(404).json({ msg: 'Invoice not found' });
-        
+
         // Manually populate customer/supplier data
         const invoiceObj = invoice.toObject();
         if (invoice.partnerModel === 'Customer') {
@@ -180,7 +180,7 @@ router.get('/:id', auth, async (req, res) => {
             const supplier = await Supplier.findById(invoice.customerOrSupplier).select('name');
             invoiceObj.customerOrSupplier = supplier;
         }
-        
+
         res.json(invoiceObj);
     } catch (err) {
         console.error(err.message);
@@ -192,13 +192,13 @@ router.get('/:id', auth, async (req, res) => {
 // @desc    Create an invoice (as draft)
 // @access  Private
 router.post('/', auth, async (req, res) => {
-    const { invoiceNumber, customerOrSupplier, partnerModel, products, totalAmount, type, date, dueDate, vat, discount1, discount2, discount3, discount4 } = req.body;
-    
+    const { invoiceNumber, customerOrSupplier, partnerModel, products, totalAmount, type, date, dueDate, vat, discount1, discount2, discount3, discount4, currency, exchangeRate } = req.body;
+
     // Validate customerOrSupplier ObjectId
     if (customerOrSupplier && !mongoose.Types.ObjectId.isValid(customerOrSupplier)) {
         return res.status(400).json({ msg: 'Invalid customer or supplier ID' });
     }
-    
+
     // Validate product ObjectIds in products array
     if (products && Array.isArray(products)) {
         for (const productItem of products) {
@@ -207,7 +207,7 @@ router.post('/', auth, async (req, res) => {
             }
         }
     }
-    
+
     try {
         const newInvoice = new Invoice({
             invoiceNumber,
@@ -223,6 +223,8 @@ router.post('/', auth, async (req, res) => {
             discount2,
             discount3,
             discount4,
+            currency,
+            exchangeRate,
             company: req.user.company,
             status: 'draft' // Always created as draft
         });
@@ -255,13 +257,13 @@ router.post('/', auth, async (req, res) => {
 // @desc    Update an invoice
 // @access  Private
 router.put('/:id', auth, async (req, res) => {
-    const { invoiceNumber, customerOrSupplier, partnerModel, products, totalAmount, type, date } = req.body;
-    
+    const { invoiceNumber, customerOrSupplier, partnerModel, products, totalAmount, type, date, currency, exchangeRate } = req.body;
+
     // Validate customerOrSupplier ObjectId if provided
     if (customerOrSupplier && !mongoose.Types.ObjectId.isValid(customerOrSupplier)) {
         return res.status(400).json({ msg: 'Invalid customer or supplier ID' });
     }
-    
+
     // Validate product ObjectIds in products array if provided
     if (products && Array.isArray(products)) {
         for (const productItem of products) {
@@ -270,8 +272,8 @@ router.put('/:id', auth, async (req, res) => {
             }
         }
     }
-    
-    const invoiceFields = { invoiceNumber, customerOrSupplier, partnerModel, products, totalAmount, type, date };
+
+    const invoiceFields = { invoiceNumber, customerOrSupplier, partnerModel, products, totalAmount, type, date, currency, exchangeRate };
     try {
         let invoice = await Invoice.findOne({ _id: req.params.id, company: req.user.company });
         if (!invoice) return res.status(404).json({ msg: 'Invoice not found' });
@@ -523,12 +525,12 @@ router.post('/:id/revert-to-approved', [auth, admin], async (req, res) => {
         if (invoice.status !== 'paid') {
             return res.status(400).json({ msg: 'Only paid invoices can be reverted to approved.' });
         }
-        
+
         // Reset paid amount
         invoice.paidAmount = 0;
         invoice.status = 'approved';
         await invoice.save();
-        
+
         res.json({ msg: 'Invoice reverted to approved status', invoice });
     } catch (err) {
         console.error(err.message);

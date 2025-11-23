@@ -52,6 +52,19 @@ const ProductSchema = new mongoose.Schema({
         default: 0,
         min: 0,
     },
+    currency: {
+        type: String,
+        default: 'TRY',
+        enum: ['TRY', 'USD', 'EUR', 'GBP'],
+    },
+    priceUSD: {
+        type: Number,
+        default: 0,
+    },
+    priceEUR: {
+        type: Number,
+        default: 0,
+    },
     quantity: {
         type: Number,
         default: 0,

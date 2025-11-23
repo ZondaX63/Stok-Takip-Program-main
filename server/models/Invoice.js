@@ -66,6 +66,15 @@ const InvoiceSchema = new mongoose.Schema({
         type: Number,
         required: true,
     },
+    currency: {
+        type: String,
+        default: 'TRY',
+        enum: ['TRY', 'USD', 'EUR', 'GBP'],
+    },
+    exchangeRate: {
+        type: Number,
+        default: 1,
+    },
     paidAmount: {
         type: Number,
         default: 0,
