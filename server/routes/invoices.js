@@ -18,7 +18,7 @@ const Supplier = require('../models/Supplier');
 // @access  Private
 router.get('/stats', auth, async (req, res) => {
     try {
-        console.log('Fetching stats for company:', req.user.company);
+
 
         // Get all invoices for the company
         const allInvoices = await Invoice.find({ company: req.user.company });
@@ -33,7 +33,7 @@ router.get('/stats', auth, async (req, res) => {
             totalAmount: allInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0)
         };
 
-        console.log('Calculated stats:', stats);
+
         res.json(stats);
     } catch (err) {
         console.error('Error in /stats endpoint:', err);
